@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-import google.generativeai as genai
+import os
+from groq import Groq
 
 # Page Configuration
 st.set_page_config(
@@ -17,8 +18,8 @@ with st.sidebar:
     st.header("⚙️ Navigation")
     role = st.radio("Select Portal Role", ["Student Portal", "TPO / Admin Dashboard"])
 
-# Fetch Gemini API Key from Streamlit Secrets
-gemini_api_key = st.secrets.get("GEMINI_API_KEY")
+# Fetch Groq API Key from Environment Variables (Render standard) or Streamlit Secrets
+groq_api_key = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY", None)
 
 # Mock Student Database Setup using Session State
 if "student_data" not in st.session_state:
@@ -85,43 +86,44 @@ if role == "Student Portal":
     st.subheader("🤖 AI Placement Readiness Evaluator")
     
     if st.button("⚡ Generate AI Assessment"):
-        if not gemini_api_key:
-            st.error("GEMINI_API_KEY not found in Streamlit Secrets. Please configure it in App Settings.")
+        if not groq_api_key:
+            st.error("GROQ_API_KEY not set. Please add GROQ_API_KEY in Render Environment Variables.")
         elif not skills or not target_role:
             st.warning("Please enter your Technical Skills and Target Job Role above.")
         else:
             try:
-                genai.configure(api_key=gemini_api_key)
-                model = genai.GenerativeModel("gemini-2.5-flash")
+                client = Groq(api_key=groq_api_key)
                 
                 prompt = f"""
-                You are a Senior University Training & Placement Officer (TPO) and Career Analyst.
+                Act as a Senior TPO. Provide a concise placement readiness evaluation in short bullet points:
                 
-                Student Profile:
-                - Name: {name}
-                - Branch: {branch}
-                - CGPA: {cgpa}
-                - Technical Skills: {skills}
-                - Target Role: {target_role}
+                Student: {name} | Branch: {branch} | CGPA: {cgpa} | Skills: {skills} | Target Role: {target_role}
                 
-                Evaluate the student's placement readiness and respond in dynamic Markdown:
-                
+                Format:
                 ## 📈 Placement Readiness Score
-                * Give a score out of **100%** based on CGPA and current skills for the target role.
+                * Score: X/100 (1-line reason)
                 
-                ## 🎯 Suitable Job Roles
-                * List 3 alternate job roles matching their current skill set.
+                ## 🎯 2 Alternate Matching Roles
+                * Role 1 & Role 2
                 
-                ## 🛠️ Skill Gap Analysis
-                * Mention missing high-demand skills required for {target_role}.
+                ## 🛠️ Key Missing Skills
+                * Top 3 missing skills for {target_role}
                 
-                ## 💡 Placement Strategy & Tips
-                * Provide 3 actionable advice items for clearing campus technical rounds and HR interviews.
+                ## 💡 Quick Preparation Tip
+                * 2 short actionable tips for interview success
                 """
                 
-                with st.spinner("AI Engine is analyzing student readiness..."):
-                    response = model.generate_content(prompt)
-                    st.markdown(response.text)
+                # Streaming response from Groq LPUs
+                response = client.chat.completions.create(
+                    messages=[{"role": "user", "content": prompt}],
+                    model="llama-3.1-8b-instant",
+                    temperature=0.3,
+                    max_tokens=400,
+                    stream=True
+                )
+                
+                st.write_stream(chunk.choices[0].delta.content for chunk in response if chunk.choices[0].delta.content)
+                
             except Exception as e:
                 st.error(f"Error processing request: {e}")
 
@@ -131,7 +133,6 @@ else:
     
     df = st.session_state.student_data
     
-    # Key Metrics Display
     m1, m2, m3, m4 = st.columns(4)
     total_students = len(df)
     placed_students = len(df[df["Placement Status"] == "Placed"])
@@ -145,7 +146,6 @@ else:
     
     st.divider()
     
-    # Filter Data
     st.subheader("🔍 Student Records Database")
     branch_filter = st.multiselect("Filter by Branch", options=df["Branch"].unique(), default=df["Branch"].unique())
     status_filter = st.multiselect("Filter by Placement Status", options=df["Placement Status"].unique(), default=df["Placement Status"].unique())
@@ -153,7 +153,6 @@ else:
     filtered_df = df[(df["Branch"].isin(branch_filter)) & (df["Placement Status"].isin(status_filter))]
     st.dataframe(filtered_df, use_container_width=True)
     
-    # Export Option
     csv = filtered_df.to_csv(index=False).encode('utf-8')
     st.download_button(
         label="📥 Export Filtered Data to CSV",
