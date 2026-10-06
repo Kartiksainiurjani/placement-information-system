@@ -12,15 +12,13 @@ st.set_page_config(
 st.title("🎓 Campus Placement Information System")
 st.write("Manage student placement records, track hiring status, and generate AI-driven career readiness reports.")
 
-# Sidebar Navigation & API Configuration
+# Sidebar Navigation
 with st.sidebar:
-    st.header("⚙️ Configuration & Navigation")
+    st.header("⚙️ Navigation")
     role = st.radio("Select Portal Role", ["Student Portal", "TPO / Admin Dashboard"])
-    st.divider()
-    user_api_key = st.text_input("Enter Groq API Key", type="password")
-    st.markdown("[Get Free Groq API Key](https://console.groq.com)")
 
-groq_api_key = st.secrets.get("GROQ_API_KEY") or user_api_key
+# Fetch API Key from Streamlit Secrets
+groq_api_key = st.secrets.get("GROQ_API_KEY")
 
 # Mock Student Database Setup using Session State
 if "student_data" not in st.session_state:
@@ -88,7 +86,7 @@ if role == "Student Portal":
     
     if st.button("⚡ Generate AI Assessment"):
         if not groq_api_key:
-            st.error("Please enter your Groq API Key in the sidebar.")
+            st.error("GROQ_API_KEY not found in Streamlit Secrets. Please configure it in App Settings.")
         elif not skills or not target_role:
             st.warning("Please enter your Technical Skills and Target Job Role above.")
         else:
