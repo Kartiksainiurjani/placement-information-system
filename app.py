@@ -92,7 +92,7 @@ if role == "Student Portal":
         else:
             try:
                 genai.configure(api_key=gemini_api_key)
-                model = genai.GenerativeModel("gemini-3.8-flash")
+                model = genai.GenerativeModel("gemini-2.5-flash")
                 
                 prompt = f"""
                 You are a Senior University Training & Placement Officer (TPO) and Career Analyst.
