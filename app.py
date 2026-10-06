@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from groq import Groq
+import google.generativeai as genai
 
 # Page Configuration
 st.set_page_config(
@@ -17,8 +17,8 @@ with st.sidebar:
     st.header("⚙️ Navigation")
     role = st.radio("Select Portal Role", ["Student Portal", "TPO / Admin Dashboard"])
 
-# Fetch API Key from Streamlit Secrets
-groq_api_key = st.secrets.get("GROQ_API_KEY")
+# Fetch Gemini API Key from Streamlit Secrets
+gemini_api_key = st.secrets.get("GEMINI_API_KEY")
 
 # Mock Student Database Setup using Session State
 if "student_data" not in st.session_state:
@@ -85,13 +85,15 @@ if role == "Student Portal":
     st.subheader("🤖 AI Placement Readiness Evaluator")
     
     if st.button("⚡ Generate AI Assessment"):
-        if not groq_api_key:
-            st.error("GROQ_API_KEY not found in Streamlit Secrets. Please configure it in App Settings.")
+        if not gemini_api_key:
+            st.error("GEMINI_API_KEY not found in Streamlit Secrets. Please configure it in App Settings.")
         elif not skills or not target_role:
             st.warning("Please enter your Technical Skills and Target Job Role above.")
         else:
             try:
-                client = Groq(api_key=groq_api_key)
+                genai.configure(api_key=gemini_api_key)
+                model = genai.GenerativeModel("gemini-3.8-flash")
+                
                 prompt = f"""
                 You are a Senior University Training & Placement Officer (TPO) and Career Analyst.
                 
@@ -118,11 +120,8 @@ if role == "Student Portal":
                 """
                 
                 with st.spinner("AI Engine is analyzing student readiness..."):
-                    chat_completion = client.chat.completions.create(
-                        messages=[{"role": "user", "content": prompt}],
-                        model="llama3-8b-8192"
-                    )
-                    st.markdown(chat_completion.choices[0].message.content)
+                    response = model.generate_content(prompt)
+                    st.markdown(response.text)
             except Exception as e:
                 st.error(f"Error processing request: {e}")
 
