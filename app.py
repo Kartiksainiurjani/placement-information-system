@@ -116,7 +116,7 @@ if role == "Student Portal":
                 # Streaming response from Groq LPUs
                 response = client.chat.completions.create(
                     messages=[{"role": "user", "content": prompt}],
-                    model="llama-3.1-8b-instant",
+                    model="llama3-8b-8192",
                     temperature=0.3,
                     max_tokens=400,
                     stream=True
