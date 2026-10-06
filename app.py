@@ -120,7 +120,7 @@ if role == "Student Portal":
                 with st.spinner("AI Engine is analyzing student readiness..."):
                     chat_completion = client.chat.completions.create(
                         messages=[{"role": "user", "content": prompt}],
-                        model="llama-3.1-8b-instant"
+                        model="llama3-8b-8192"
                     )
                     st.markdown(chat_completion.choices[0].message.content)
             except Exception as e:
