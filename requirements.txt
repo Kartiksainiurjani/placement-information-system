@@ -1,5 +1,3 @@
 streamlit
 pandas
-openpyxl
-google-generativeai
-
+groq
